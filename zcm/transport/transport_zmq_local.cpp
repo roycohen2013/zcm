@@ -1,4 +1,4 @@
-#ifdef USING_ZMQ
+#ifndef DISABLE_ZMQ
 
 #include "zcm/transport.h"
 #include "zcm/transport_registrar.h"
@@ -433,12 +433,12 @@ static zcm_trans_t *createInproc(zcm_url_t *url)
 }
 
 // Register this transport with ZCM
-#ifdef USING_TRANS_IPC
+#ifndef DISABLE_TRANS_IPC
 const TransportRegister ZCM_TRANS_CLASSNAME::regIpc(
     "ipc",    "Transfer data via Inter-process Communication (e.g. 'ipc')", createIpc);
 #endif
 
-#ifdef USING_TRANS_INPROC
+#ifndef DISABLE_TRANS_INPROC
 const TransportRegister ZCM_TRANS_CLASSNAME::regInproc(
     "inproc", "Transfer data via Internal process memory (e.g. 'inproc')",  createInproc);
 #endif

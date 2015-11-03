@@ -529,7 +529,7 @@ static zcm_trans_t *createUdpm(zcm_url_t *url)
     }
 }
 
-#ifdef USING_TRANS_UDPM
+#ifndef DISABLE_TRANS_UDPM
 // Register this transport with ZCM
 const TransportRegister ZCM_TRANS_CLASSNAME::regUdpm(
     // XXX: the example url does not work

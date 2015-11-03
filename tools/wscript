@@ -3,6 +3,6 @@
 
 def build(ctx):
     ctx.recurse('lspy');
-    if ctx.env.USING_JAVA:
+    if not ctx.env.DISABLE_JAVA:
         ctx.recurse('java');
     ctx.recurse('cpp');

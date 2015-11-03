@@ -59,7 +59,11 @@ def process_zcm_options(ctx):
 
     env.DISABLE_CPP  = False
     env.DISABLE_JAVA = hasopt('disable_java')
+    if not env.DISABLE_JAVA:
+        attempt_use_java(ctx);
     env.DISABLE_ZMQ  = hasopt('disable_zmq')
+    if not env.DISABLE_ZMQ:
+        attempt_use_zmq(ctx);
 
     env.DISABLE_TRANS_IPC    = hasopt('disable_ipc')
     env.DISABLE_TRANS_INPROC = hasopt('disable_inproc')
@@ -90,6 +94,15 @@ def process_zcm_options(ctx):
 
     Logs.pprint('NORMAL', '')
 
+def attempt_use_java(ctx):
+    ctx.load('java')
+    ctx.check_jni_headers()
+    return True
+
+def attempt_use_zmq(ctx):
+    ctx.check_cfg(package='libzmq', args='--cflags --libs', uselib_store='zmq')
+    return True
+
 def setup_environment(ctx):
     ctx.post_mode = waflib.Build.POST_LAZY
 
@@ -103,7 +116,7 @@ def setup_environment(ctx):
 
     ctx.env.DEFINES_default = []
     for k in ctx.env.keys():
-        if k.startswith('USING_'):
+        if k.startswith('DISABLE_') or k.startswith('USING_'):
             if getattr(ctx.env, k):
                 ctx.env.DEFINES_default.append(k)
 
