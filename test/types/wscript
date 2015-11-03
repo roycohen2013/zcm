@@ -2,7 +2,7 @@
 
 def build(ctx):
     lang = ['c', 'cpp']
-    if ctx.env.USING_JAVA:
+    if not ctx.env.DISABLE_JAVA:
         lang += ['java']
     ctx.zcmgen(name    = 'testzcmtypes',
                source  = ctx.path.ant_glob('*.zcm'),

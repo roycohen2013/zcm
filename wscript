@@ -25,20 +25,19 @@ def add_zcm_options(ctx):
     gr.add_option('-d', '--debug', dest='debug', default=False, action='store_true',
                    help='Compile all C/C++ code in debug mode: no optimizations and full symbols')
 
-    def add_use_option(name, desc):
-        gr.add_option('--use-'+name, dest='use_'+name, default=False, action='store_true', help=desc)
+    def add_disable_option(name, desc):
+        gr.add_option('--disable-'+name, dest='disable_'+name, default=False, action='store_true', help=desc)
 
     def add_trans_option(name, desc):
-        gr.add_option('--use-'+name, dest='use_'+name, default=False, action='store_true', help=desc)
+        gr.add_option('--disable-'+name, dest='disable_'+name, default=False, action='store_true', help=desc)
 
-    add_use_option('all',  'Attempt to enable every ZCM feature')
-    add_use_option('java', 'Enable java features')
-    add_use_option('zmq',  'Enable ZeroMQ features')
+    add_disable_option('java', 'Disable java features')
+    add_disable_option('zmq',  'Disable ZeroMQ features')
 
-    add_trans_option('inproc', 'Enable the In-Process transport (Requires ZeroMQ)')
-    add_trans_option('ipc',    'Enable the IPC transport (Requires ZeroMQ)')
-    add_trans_option('udpm',   'Enable the UDP Multicast transport (LCM-compatible)')
-    add_trans_option('serial', 'Enable the Serial transport')
+    add_trans_option('inproc', 'Disable the In-Process transport (Requires ZeroMQ)')
+    add_trans_option('ipc',    'Disable the IPC transport (Requires ZeroMQ)')
+    add_trans_option('udpm',   'Disable the UDP Multicast transport (LCM-compatible)')
+    add_trans_option('serial', 'Disable the Serial transport')
 
 def configure(ctx):
     ctx.load('compiler_c')
@@ -52,24 +51,28 @@ def process_zcm_options(ctx):
     opt = waflib.Options.options
     env = ctx.env;
     def hasopt(key):
-        return opt.use_all or getattr(opt, key)
+        return getattr(opt, key)
 
     ctx.env.VERSION='1.0.0'
     ctx.USING_OPT = not opt.debug
     ctx.USING_SYM = opt.debug or opt.symbols
 
-    env.USING_CPP  = True
-    env.USING_JAVA = hasopt('use_java') and attempt_use_java(ctx)
-    env.USING_ZMQ  = hasopt('use_zmq')  and attempt_use_zmq(ctx)
+    env.DISABLE_CPP  = False
+    env.DISABLE_JAVA = hasopt('disable_java')
+    if not env.DISABLE_JAVA:
+        attempt_use_java(ctx);
+    env.DISABLE_ZMQ  = hasopt('disable_zmq')
+    if not env.DISABLE_ZMQ:
+        attempt_use_zmq(ctx);
 
-    env.USING_TRANS_IPC    = hasopt('use_ipc')
-    env.USING_TRANS_INPROC = hasopt('use_inproc')
-    env.USING_TRANS_UDPM   = hasopt('use_udpm')
-    env.USING_TRANS_SERIAL = hasopt('use_serial')
+    env.DISABLE_TRANS_IPC    = hasopt('disable_ipc')
+    env.DISABLE_TRANS_INPROC = hasopt('disable_inproc')
+    env.DISABLE_TRANS_UDPM   = hasopt('disable_udpm')
+    env.DISABLE_TRANS_SERIAL = hasopt('disable_serial')
 
-    ZMQ_REQUIRED = env.USING_TRANS_IPC or env.USING_TRANS_INPROC
-    if ZMQ_REQUIRED and not env.USING_ZMQ:
-        raise WafError("Using ZeroMQ is required for some of the selected transports (--use-zmq)")
+    ZMQ_REQUIRED = not env.DISABLE_TRANS_IPC or not env.DISABLE_TRANS_INPROC
+    if ZMQ_REQUIRED and env.DISABLE_ZMQ:
+        raise WafError("Using ZeroMQ is required for some of the selected transports (turn off --disable-zmq)")
 
     def print_entry(name, enabled):
         Logs.pprint("NORMAL", "    {:15}".format(name), sep='')
@@ -79,15 +82,15 @@ def process_zcm_options(ctx):
             Logs.pprint("RED", "Disabled")
 
     Logs.pprint('BLUE', '\nDependency Configuration:')
-    print_entry("C/C++",  env.USING_CPP)
-    print_entry("Java",   env.USING_JAVA)
-    print_entry("ZeroMQ", env.USING_ZMQ)
+    print_entry("C/C++",  not env.DISABLE_CPP)
+    print_entry("Java",   not env.DISABLE_JAVA)
+    print_entry("ZeroMQ", not env.DISABLE_ZMQ)
 
     Logs.pprint('BLUE', '\nTransport Configuration:')
-    print_entry("ipc",    env.USING_TRANS_IPC)
-    print_entry("inproc", env.USING_TRANS_INPROC)
-    print_entry("udpm",   env.USING_TRANS_UDPM)
-    print_entry("serial", env.USING_TRANS_SERIAL)
+    print_entry("ipc",    not env.DISABLE_TRANS_IPC)
+    print_entry("inproc", not env.DISABLE_TRANS_INPROC)
+    print_entry("udpm",   not env.DISABLE_TRANS_UDPM)
+    print_entry("serial", not env.DISABLE_TRANS_SERIAL)
 
     Logs.pprint('NORMAL', '')
 
@@ -113,7 +116,7 @@ def setup_environment(ctx):
 
     ctx.env.DEFINES_default = []
     for k in ctx.env.keys():
-        if k.startswith('USING_'):
+        if k.startswith('DISABLE_') or k.startswith('USING_'):
             if getattr(ctx.env, k):
                 ctx.env.DEFINES_default.append(k)
 
