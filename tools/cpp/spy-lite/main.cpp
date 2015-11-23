@@ -319,7 +319,7 @@ int main(int argc, char *argv[])
     DEBUG_INIT();
     bool debug = false;
 
-    // XXX get opt
+    // TODO use the get opt lib from util/
     if(argc > 1 && strcmp(argv[1], "--debug") == 0)
         debug = true;
 
