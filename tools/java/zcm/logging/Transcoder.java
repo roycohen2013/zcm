@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import zcm.zcm.*;
-import zcm.spy.*;
 import zcm.util.*;
 
 public class Transcoder

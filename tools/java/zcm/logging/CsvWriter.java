@@ -12,7 +12,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 
 import zcm.zcm.*;
-import zcm.spy.*;
 import zcm.util.*;
 
 public class CsvWriter implements ZCMSubscriber
@@ -98,7 +97,9 @@ public class CsvWriter implements ZCMSubscriber
             Object o = cls.getConstructor(DataInput.class).newInstance(dins);
 
             if (plugin != null) {
-                numLinesWritten += plugin.printCustom(channel, o, utime, output);
+                if (Arrays.asList(plugin.handleFingerprints()).contains(fingerprint)) {
+                    numLinesWritten += plugin.printCustom(channel, o, utime, output);
+                }
             } else {
                 numLinesWritten += CsvWriterPlugin.printDefault(channel, o, utime, output);
             }
