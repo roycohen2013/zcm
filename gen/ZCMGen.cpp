@@ -140,7 +140,7 @@ ZCMStruct::ZCMStruct(ZCMGen& zcmgen, const string& zcmfile, const string& struct
     zcmfile(zcmfile)
 {}
 
-ZCMConstant::ZCMConstant(const string& type, const string& name, const string& valstr) :
+ZCMConstant::ZCMConstant(const ZCMTypename& type, const string& name, const string& valstr) :
     type(type), membername(name), valstr(valstr)
 {}
 
@@ -308,7 +308,7 @@ static int parseConst(ZCMGen& zcmgen, ZCMStruct& lr, tokenize_t *t)
     if (!ZCMGen::isLegalConstType(t->token))
         parse_error(t, "invalid type for const");
 
-    string lctypename = t->token;
+    ZCMTypename lt {zcmgen, t->token};
 
     do {
         // get the member name
@@ -331,7 +331,7 @@ static int parseConst(ZCMGen& zcmgen, ZCMStruct& lr, tokenize_t *t)
         tokenizeNextOrFail(t, "constant value");
 
         // create a new const member
-        ZCMConstant lc {lctypename, membername, t->token};
+        ZCMConstant lc {lt, membername, t->token};
 
         // Attach the last comment if one was defined.
         if (zcmgen.comment != "")
@@ -341,40 +341,40 @@ static int parseConst(ZCMGen& zcmgen, ZCMStruct& lr, tokenize_t *t)
         // TODO: This should migrate to either the ctor or a helper function called just
         //       before the ctor
         char *endptr = NULL;
-        if (lctypename == "int8_t") {
+        if (lt.fullname == "int8_t") {
             long long v = strtoll(t->token, &endptr, 0);
             if (endptr == t->token || *endptr != '\0')
                 parse_error(t, "Expected integer value");
             if (v < INT8_MIN || v > INT8_MAX)
                 semantic_error(t, "Integer value out of bounds for int8_t");
             lc.val.i8 = (int8_t)v;
-        } else if (lctypename == "int16_t") {
+        } else if (lt.fullname == "int16_t") {
             long long v = strtoll(t->token, &endptr, 0);
             if (endptr == t->token || *endptr != '\0')
                 parse_error(t, "Expected integer value");
             if (v < INT16_MIN || v > INT16_MAX)
                 semantic_error(t, "Integer value out of range for int16_t");
             lc.val.i16 = (int16_t)v;
-        } else if (lctypename == "int32_t") {
+        } else if (lt.fullname == "int32_t") {
             long long v = strtoll(t->token, &endptr, 0);
             if (endptr == t->token || *endptr != '\0')
                 parse_error(t, "Expected integer value");
             if (v < INT32_MIN || v > INT32_MAX)
                 semantic_error(t, "Integer value out of range for int32_t");
             lc.val.i32 = (int32_t)v;
-        } else if (lctypename == "int64_t") {
+        } else if (lt.fullname == "int64_t") {
             long long v = strtoll(t->token, &endptr, 0);
             if (endptr == t->token || *endptr != '\0')
                 parse_error(t, "Expected integer value");
             lc.val.i64 = (int64_t)v;
-        } else if (lctypename == "float") {
+        } else if (lt.fullname == "float") {
             double v = strtod(t->token, &endptr);
             if (endptr == t->token || *endptr != '\0')
                 parse_error(t, "Expected floating point value");
             if (v > FLT_MAX || v < -FLT_MAX)
                 semantic_error(t, "Floating point value out of range for float");
             lc.val.f = (float)v;
-        } else if (lctypename == "double") {
+        } else if (lt.fullname == "double") {
             double v = strtod(t->token, &endptr);
             if (endptr == t->token || *endptr != '\0')
                 parse_error(t, "Expected floating point value");
@@ -463,27 +463,45 @@ static int parseMember(ZCMGen& zcmgen, ZCMStruct& lr, tokenize_t *t)
                 if (!isLegalMemberName(t->token))
                     semantic_error(t, "Invalid array size variable name: must start with [a-zA-Z_].");
 
-                // make sure the named variable is
-                // 1) previously declared and
-                // 2) an integer type
-                int okay = 0;
-
-                for (auto& thislm : lr.members) {
-                    if (thislm.membername == t->token) {
-                        if (thislm.dimensions.size() != 0)
-                            semantic_error(t, "Array dimension '%s' must be not be an array type.", t->token);
-                        if (!ZCMGen::isArrayDimType(thislm.type.fullname))
-                            semantic_error(t, "Array dimension '%s' must be an integer type.", t->token);
-                        okay = 1;
-                        break;
+                bool foundConstLength = false;
+                for (auto& thislc : lr.constants) {
+                    if (thislc.membername == t->token) {
+                        if (!ZCMGen::isArrayDimType(thislc.type.fullname))
+                            semantic_error(t, "Array dimension '%s' must be an "
+                                              "integer type.", t->token);
+                        dim.mode = ZCM_CONST;
+                        dim.size = thislc.valstr;
+                        foundConstLength = true;
                     }
                 }
 
-                if (!okay)
-                    semantic_error(t, "Unknown variable array index '%s'. Index variables must be declared before the array.", t->token);
+                if (!foundConstLength) {
+                    // make sure the named variable is
+                    // 1) previously declared and
+                    // 2) an integer type
+                    int okay = 0;
 
-                dim.mode = ZCM_VAR;
-                dim.size = t->token;
+                    for (auto& thislm : lr.members) {
+                        if (thislm.membername == t->token) {
+                            if (thislm.dimensions.size() != 0)
+                                semantic_error(t, "Array dimension '%s' must be "
+                                                  "not be an array type.", t->token);
+                            if (!ZCMGen::isArrayDimType(thislm.type.fullname))
+                                semantic_error(t, "Array dimension '%s' must be "
+                                                  "an integer type.", t->token);
+                            okay = 1;
+                            break;
+                        }
+                    }
+
+                    if (!okay)
+                        semantic_error(t, "Unknown variable array index '%s'. "
+                                          "Index variables must be declared "
+                                          "before the array.", t->token);
+
+                    dim.mode = ZCM_VAR;
+                    dim.size = t->token;
+                }
             }
             parseRequire(t, "]");
 

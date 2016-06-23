@@ -203,17 +203,17 @@ struct Emit : public Emitter
         if (ls.constants.size() > 0) {
             emit(1, "public:");
             for (auto& lc : ls.constants) {
-                assert(ZCMGen::isLegalConstType(lc.type));
+                assert(ZCMGen::isLegalConstType(lc.type.fullname));
 
                 emitComment(2, lc.comment);
                 // For int32_t only, we emit enums instead of static const
                 // values because the former can be passed by reference while
                 // the latter cannot.
-                if (lc.type == "int32_t") {
+                if (lc.type.fullname == "int32_t") {
                     emit(2, "enum { %s = %s };", lc.membername.c_str(), lc.valstr.c_str());
                 } else {
-                    const char *suffix = lc.type == "int64_t" ? "LL" : "";
-                    string mt = mapTypeName(lc.type);
+                    const char *suffix = lc.type.fullname == "int64_t" ? "LL" : "";
+                    string mt = mapTypeName(lc.type.fullname);
                     emit(2, "static const %-8s %s = %s%s;", mt.c_str(),
                          lc.membername.c_str(), lc.valstr.c_str(), suffix);
                 }

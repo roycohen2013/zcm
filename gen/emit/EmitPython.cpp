@@ -83,7 +83,7 @@ struct PyEmitStruct : public Emitter
 
         // CONSTANTS
         for (auto& lc : ls.constants) {
-            assert(ZCMGen::isLegalConstType(lc.type));
+            assert(ZCMGen::isLegalConstType(lc.type.fullname));
             emit(1, "%s = %s", lc.membername.c_str(), lc.valstr.c_str());
         }
         if (ls.constants.size() > 0)

@@ -379,9 +379,9 @@ struct EmitStruct : public Emitter
         //////////////////////////////////////////////////////////////
         // CONSTANTS
         for (auto& lc : lr.constants) {
-            assert(ZCMGen::isLegalConstType(lc.type));
+            assert(ZCMGen::isLegalConstType(lc.type.fullname));
 
-            auto& tn = lc.type;
+            auto& tn = lc.type.fullname;
             auto *name = lc.membername.c_str();
             auto *value = lc.valstr.c_str();
 

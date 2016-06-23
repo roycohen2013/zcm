@@ -1,0 +1,7 @@
+struct example3_t {
+    const int16_t Array1Size = 10;
+    const int16_t Array2Size = 20;
+
+    int16_t array1[Array1Size];
+    int16_t array2[Array2Size];
+}
